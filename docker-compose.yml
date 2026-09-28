@@ -1,0 +1,51 @@
+services:
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: transport-postgres
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: transport-api:1.0.0
+    container_name: transport-api
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      APP_USERNAME: ${APP_USERNAME}
+      APP_PASSWORD_HASH: ${APP_PASSWORD_HASH}
+      JWT_SECRET: ${JWT_SECRET}
+
+      STORAGE_LOCATION: /app/storage
+
+    ports:
+      - "8080:8080"
+
+    volumes:
+      - app_storage:/app/storage
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  app_storage:
